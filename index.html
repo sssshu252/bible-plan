@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>两年读经计划</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1208;--parchment:#fdf6e8;--gold:#c8973a;--gold-l:#f0d898;--gold-d:#8a6020;
+  --rust:#8b3a2a;--sage:#4a6741;--sky:#2c5f8a;--cream:#f5ead0;--bd:rgba(200,151,58,.28);
+}
+
+/* ── Password screen ── */
+#pw-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--parchment);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Noto Sans SC',sans-serif;
+}
+#pw-screen::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 30% 20%,rgba(200,151,58,.1) 0%,transparent 55%),
+             radial-gradient(ellipse at 75% 85%,rgba(139,58,42,.07) 0%,transparent 55%);
+}
+.pw-box{
+  position:relative;z-index:1;
+  background:#fff;border:1px solid rgba(200,151,58,.35);
+  border-radius:16px;padding:36px 32px;width:320px;text-align:center;
+  box-shadow:0 8px 40px rgba(26,18,8,.1);
+}
+.pw-cross{font-size:28px;color:var(--gold);margin-bottom:12px}
+.pw-title{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;letter-spacing:.08em;margin-bottom:6px}
+.pw-sub{font-size:12px;color:#aaa;margin-bottom:24px;letter-spacing:.04em}
+.pw-input{
+  width:100%;border:1px solid rgba(200,151,58,.4);border-radius:10px;
+  padding:11px 14px;font-size:15px;font-family:'Noto Sans SC',sans-serif;
+  background:#fdf8f0;color:var(--ink);outline:none;text-align:center;
+  letter-spacing:.15em;margin-bottom:14px;transition:border-color .2s;
+}
+.pw-input:focus{border-color:var(--gold)}
+.pw-btn{
+  width:100%;padding:11px;background:var(--gold);color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-family:'Noto Sans SC',sans-serif;
+  font-weight:500;cursor:pointer;transition:opacity .15s;letter-spacing:.06em;
+}
+.pw-btn:hover{opacity:.88}
+.pw-err{font-size:12px;color:var(--rust);margin-top:10px;min-height:18px;transition:opacity .2s}
+.pw-hint{font-size:11px;color:#ccc;margin-top:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--parchment);color:var(--ink);font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 15% 10%,rgba(200,151,58,.07) 0%,transparent 55%),
+             radial-gradient(ellipse at 85% 90%,rgba(139,58,42,.05) 0%,transparent 55%)}
+.app{position:relative;z-index:1;max-width:880px;margin:0 auto;padding:16px 14px 60px}
+
+/* header */
+.hdr{text-align:center;padding:22px 0 18px;border-bottom:1px solid var(--bd);margin-bottom:18px}
+.hdr-cross{font-size:22px;color:var(--gold);margin-bottom:6px}
+.hdr h1{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;letter-spacing:.08em}
+.hdr p{font-size:12px;color:var(--gold-d);margin-top:4px;letter-spacing:.06em}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px 8px;text-align:center}
+.stat-n{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;color:var(--gold-d)}
+.stat-l{font-size:11px;color:#999;margin-top:2px}
+
+/* streak */
+.streak{background:linear-gradient(135deg,#fff8ec,#fff3dc);border:1px solid var(--gold-l);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.str-icon{font-size:24px}
+.str-txt{flex:1}.str-txt strong{font-size:14px;color:var(--gold-d)}.str-txt p{font-size:11px;color:#999;margin-top:2px}
+.str-dots{display:flex;gap:4px}
+.sdot{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--gold-l);background:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;color:#ccc}
+.sdot.done{background:var(--gold);border-color:var(--gold);color:#fff}
+.sdot.today{border-color:var(--gold);color:var(--gold-d);font-weight:600}
+
+/* tabs */
+.tabs{display:flex;border-bottom:1px solid var(--bd);margin-bottom:16px;overflow-x:auto;gap:0}
+.tab{padding:8px 16px;font-size:13px;color:#999;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--gold-d)}.tab.active{color:var(--gold-d);border-bottom-color:var(--gold);font-weight:500}
+.panel{display:none}.panel.active{display:block}
+
+/* today */
+.today-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.day-badge{display:flex;align-items:center;gap:8px}
+.day-num{background:var(--gold);color:#fff;font-family:'Noto Serif SC',serif;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+.today-ref{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:700}
+.today-type{font-size:11px;color:var(--sage);background:rgba(74,103,65,.1);padding:2px 8px;border-radius:20px}
+
+/* map */
+.map-box{border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.map-inner{background:linear-gradient(160deg,#e4f0df,#d8ead8,#c8dfc8);height:110px;display:flex;align-items:center;justify-content:center;position:relative;font-size:13px}
+.map-pin{position:absolute;font-size:16px}
+.map-lbl{font-size:11px;color:var(--sage);font-weight:500;background:rgba(255,255,255,.85);padding:3px 10px;border-radius:20px}
+
+/* chapter card */
+.ch-card{background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.ch-card-hdr{background:linear-gradient(135deg,var(--cream),#f8f0d8);padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.ch-title{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700}
+.chk-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--gold-l);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;flex-shrink:0}
+.chk-btn.done{background:var(--sage);border-color:var(--sage);color:#fff}
+.ch-body{padding:14px 16px}
+
+/* info boxes */
+.ibox{border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:12px;font-size:13px;line-height:1.65}
+.ibox-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;margin-bottom:3px}
+.funfact{background:linear-gradient(135deg,#fff8ec,#fff3dc);border-left:3px solid var(--gold)}
+.funfact .ibox-lbl{color:var(--gold-d)}
+.history{background:#f0f4f8;border-left:3px solid var(--sky)}
+.history .ibox-lbl{color:var(--sky)}
+.commentary{background:#f8f0f4;border-left:3px solid var(--rust)}
+.commentary .ibox-lbl{color:var(--rust)}
+
+/* questions */
+.qs-ttl{font-size:13px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.q-item{background:#fff;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.q-num{background:var(--cream);border-bottom:1px solid var(--bd);padding:7px 13px;font-size:11px;font-weight:600;color:var(--gold-d)}
+.q-text{padding:8px 13px;font-size:13px;color:var(--ink);line-height:1.6}
+.q-ans{width:100%;border:none;border-top:1px solid var(--bd);padding:9px 13px;font-size:13px;font-family:'Noto Sans SC',sans-serif;background:#fafafa;resize:none;min-height:68px;outline:none;color:var(--ink);line-height:1.6}
+.q-ans:focus{background:#fffdf5}
+
+.save-btn{width:100%;padding:11px;background:var(--gold);color:#fff;border:none;border-radius:10px;font-size:14px;font-family:'Noto Sans SC',sans-serif;font-weight:500;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn:hover{opacity:.88}.save-btn:disabled{opacity:.45;cursor:default}
+.save-status{text-align:center;font-size:12px;color:#aaa;margin-top:7px}
+
+/* devotionals */
+.dev-ttl{font-size:13px;font-weight:500;margin-bottom:10px}
+.dev-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:11px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.dev-src{font-size:10px;font-weight:600;color:#fff;padding:3px 8px;border-radius:20px;white-space:nowrap;margin-top:1px}
+.dev-src.oc{background:var(--sage)}.dev-src.lq{background:var(--sky)}.dev-src.ai{background:var(--gold-d)}
+.dev-body strong{font-size:13px;color:var(--ink);display:block;margin-bottom:3px}
+.dev-body p{font-size:12px;color:#777;line-height:1.5}
+.dev-link{font-size:12px;color:var(--sky);text-decoration:none}
+
+/* plan */
+.phase-block{background:#fff;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.phase-hdr{padding:11px 15px;background:linear-gradient(135deg,var(--cream),#f8f0d8);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.phase-name{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700}
+.phase-meta{font-size:11px;color:#999}
+.phase-prog{height:3px;background:var(--gold-l)}
+.phase-prog-fill{height:100%;transition:width .4s}
+.phase-books{padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px}
+.bpill{font-size:12px;padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:#fafaf8;cursor:pointer;transition:all .15s}
+.bpill:hover{background:var(--cream);border-color:var(--gold)}
+.bpill.done{background:rgba(74,103,65,.12);border-color:var(--sage);color:var(--sage)}
+.bpill.current{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:500}
+
+/* heatmap */
+.hm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px}
+.hm-cell{aspect-ratio:1;border-radius:3px;background:#f0ece4;cursor:default}
+.hm-cell.done{background:var(--sage)}.hm-cell.partial{background:var(--gold-l)}.hm-cell.today-c{outline:2px solid var(--gold);outline-offset:1px}
+.hm-lbl{font-size:11px;color:#aaa;display:flex;justify-content:space-between;margin-bottom:5px}
+
+/* loading / ai */
+.loading{text-align:center;padding:18px;color:#aaa;font-size:12px}
+.spin{width:18px;height:18px;border:2px solid var(--gold-l);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-gen{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--gold-d)}
+.ai-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
+
+/* toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ink);color:var(--gold-l);padding:10px 22px;border-radius:28px;font-size:13px;font-family:'Noto Serif SC',serif;z-index:999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* catchup */
+.catchup{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:13px;font-size:13px;color:#666;line-height:1.7;margin-top:14px}
+
+@media(max-width:560px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .str-dots{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Password screen ── -->
+<div id="pw-screen">
+  <div class="pw-box">
+    <div class="pw-cross">✦</div>
+    <div class="pw-title">两年读经计划</div>
+    <div class="pw-sub">请输入访问密码</div>
+    <input class="pw-input" type="password" id="pw-input" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')checkPw()" autocomplete="current-password" autofocus>
+    <button class="pw-btn" onclick="checkPw()">进入</button>
+    <div class="pw-err" id="pw-err"></div>
+    <div class="pw-hint">故事先行 · 背景随行 · 恩典同行</div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
+
+<div class="hdr">
+  <div class="hdr-cross">✦</div>
+  <h1>两年读经计划</h1>
+  <p>故事先行 · 背景随行 · 恩典同行</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n" id="s-days">0</div><div class="stat-l">已读章数</div></div>
+  <div class="stat"><div class="stat-n" id="s-streak">0</div><div class="stat-l">连续天数</div></div>
+  <div class="stat"><div class="stat-n" id="s-pct">0%</div><div class="stat-l">总进度</div></div>
+  <div class="stat"><div class="stat-n" id="s-left">730</div><div class="stat-l">剩余天数</div></div>
+</div>
+
+<div class="streak">
+  <div class="str-icon" id="str-icon">🌱</div>
+  <div class="str-txt">
+    <strong id="str-msg">开始你的读经旅程！</strong>
+    <p id="str-sub">每天一章，两年读完全本圣经</p>
+  </div>
+  <div class="str-dots" id="str-dots"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('today')">今日读经</div>
+  <div class="tab" onclick="switchTab('plan')">完整计划</div>
+  <div class="tab" onclick="switchTab('heatmap')">打卡记录</div>
+  <div class="tab" onclick="switchTab('settings')">设置</div>
+</div>
+
+<!-- TODAY -->
+<div id="panel-today" class="panel active">
+  <div class="today-hdr">
+    <div class="day-badge">
+      <div class="day-num" id="t-daynum">第1天</div>
+      <div class="today-ref" id="t-ref">路得记 1章</div>
+    </div>
+    <div class="today-type" id="t-type">叙事 · ⭐</div>
+  </div>
+
+  <div class="map-box">
+    <div class="map-inner">
+      <div class="map-pin" style="top:38%;left:50%">📍</div>
+      <div class="map-pin" style="top:52%;left:38%">🏔️</div>
+      <div class="map-lbl" id="t-maplbl">伯利恒 · 摩押</div>
+    </div>
+  </div>
+
+  <div class="ch-card">
+    <div class="ch-card-hdr">
+      <div class="ch-title" id="t-chtitle">路得记 第1章</div>
+      <button class="chk-btn" id="main-chk" onclick="toggleCheck()">○</button>
+    </div>
+    <div class="ch-body">
+      <div class="ibox funfact" id="box-funfact">
+        <div class="ibox-lbl">🌟 FUN FACT · 现代连接</div>
+        <div id="txt-funfact"><div class="ai-gen"><div class="ai-dot"></div>加载中…</div></div>
+      </div>
+      <div class="ibox history" id="box-history">
+        <div class="ibox-lbl">🗺️ 历史背景注释</div>
+        <div id="txt-history"><div class="ai-gen"><div class="ai-dot"></div>加载中…</div></div>
+      </div>
+      <div class="ibox commentary" id="box-commentary">
+        <div class="ibox-lbl">📚 解经参考（丁道尔风格）</div>
+        <div id="txt-commentary"><div class="ai-gen"><div class="ai-dot"></div>加载中…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:14px">
+    <div class="qs-ttl">✍️ 今日三问 <span style="font-size:11px;color:#aaa;font-weight:400">（完成后可存入 Google Doc）</span></div>
+    <div id="qs-container"><div class="loading"><div class="spin"></div>生成今日问题中…</div></div>
+    <button class="save-btn" id="save-btn" onclick="saveDoc()" disabled>💾 保存到 Google Doc</button>
+    <div class="save-status" id="save-status"></div>
+  </div>
+
+  <div>
+    <div class="dev-ttl">🕊️ 相关灵修见证</div>
+    <div id="dev-container"><div class="loading"><div class="spin"></div>搜索灵修资源中…</div></div>
+  </div>
+</div>
+
+<!-- PLAN -->
+<div id="panel-plan" class="panel">
+  <div id="plan-phases"></div>
+</div>
+
+<!-- HEATMAP -->
+<div id="panel-heatmap" class="panel">
+  <div class="hm-lbl"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+  <div class="hm-grid" id="hm-grid"></div>
+  <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:#aaa">
+    <span style="width:12px;height:12px;background:#f0ece4;border-radius:2px;display:inline-block"></span>未读
+    <span style="width:12px;height:12px;background:var(--gold-l);border-radius:2px;display:inline-block"></span>部分
+    <span style="width:12px;height:12px;background:var(--sage);border-radius:2px;display:inline-block"></span>完成
+  </div>
+  <div class="catchup" id="catchup-msg">计算中…</div>
+</div>
+
+<!-- SETTINGS -->
+<div id="panel-settings" class="panel">
+  <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:12px">📅 计划开始日期</div>
+    <input type="date" id="inp-startdate" style="border:1px solid var(--bd);border-radius:8px;padding:7px 11px;font-size:13px;font-family:inherit;width:100%" onchange="saveSetting()">
+  </div>
+  <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">🔗 Google Doc ID</div>
+    <div style="font-size:12px;color:#888;margin-bottom:8px">打开 Google Doc，复制网址中 /d/ 到 /edit 之间的内容</div>
+    <input type="text" id="inp-gdocid" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" style="border:1px solid var(--bd);border-radius:8px;padding:7px 11px;font-size:13px;font-family:inherit;width:100%;margin-bottom:8px" onchange="saveSetting()">
+    <div style="font-size:12px;color:var(--sky)">💡 保存时内容会复制到剪贴板，Google Doc 自动打开，粘贴即可</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:10px">⚙️ 显示偏好</div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="pref-ff" checked onchange="saveSetting()"> 显示 Fun Fact</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="pref-hist" checked onchange="saveSetting()"> 显示历史背景注释</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="pref-comm" checked onchange="saveSetting()"> 显示解经参考</label>
+  </div>
+  <button onclick="resetAll()" style="width:100%;padding:10px;background:transparent;border:1px solid #e0c8c8;border-radius:10px;font-size:13px;color:var(--rust);cursor:pointer">🔄 重置所有进度</button>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── PLAN DATA ───────────────────────────────
+const PLAN=[
+  {phase:"第一阶段·故事起点",months:"第1-4月",col:"#c8973a",books:[
+    {book:"路得记",ch:4,type:"叙事",dif:1,map:"伯利恒·摩押",era:"士师时代 约前1100年"},
+    {book:"约拿书",ch:4,type:"先知",dif:1,map:"尼尼微·地中海",era:"亚述帝国时代"},
+    {book:"以斯帖记",ch:10,type:"叙事",dif:1,map:"波斯书珊城",era:"约前479年"},
+    {book:"创世记",ch:50,type:"叙事",dif:2,map:"伊甸园·美索不达米亚",era:"远古时代"},
+    {book:"出埃及记",ch:40,type:"叙事",dif:2,map:"埃及·西奈山",era:"约前1446年"},
+    {book:"约书亚记",ch:24,type:"叙事",dif:2,map:"迦南地·约旦河",era:"约前1406年"},
+  ]},
+  {phase:"第二阶段·王国风云",months:"第5-8月",col:"#8b3a2a",books:[
+    {book:"撒母耳记上",ch:31,type:"叙事",dif:2,map:"示罗·耶路撒冷",era:"约前1050年"},
+    {book:"撒母耳记下",ch:24,type:"叙事",dif:2,map:"耶路撒冷·希伯仑",era:"大卫王朝"},
+    {book:"列王纪上",ch:22,type:"叙事",dif:2,map:"耶路撒冷·北国",era:"所罗门至亚哈"},
+    {book:"列王纪下",ch:25,type:"叙事",dif:2,map:"北国·南国",era:"分裂至亡国"},
+    {book:"以斯拉记",ch:10,type:"叙事",dif:2,map:"波斯·耶路撒冷",era:"被掳归回"},
+    {book:"尼希米记",ch:13,type:"叙事",dif:2,map:"耶路撒冷城墙",era:"约前445年"},
+  ]},
+  {phase:"第三阶段·诗歌智慧",months:"第9-10月",col:"#4a6741",books:[
+    {book:"诗篇",ch:150,type:"诗歌",dif:1,map:"圣殿·旷野",era:"跨越多个时代"},
+    {book:"箴言",ch:31,type:"智慧",dif:1,map:"耶路撒冷",era:"所罗门时代"},
+    {book:"约伯记",ch:42,type:"智慧",dif:3,map:"乌斯地",era:"远古时代"},
+    {book:"传道书",ch:12,type:"智慧",dif:2,map:"耶路撒冷",era:"所罗门晚期"},
+    {book:"雅歌",ch:8,type:"诗歌",dif:2,map:"耶路撒冷·迦密山",era:"所罗门时代"},
+  ]},
+  {phase:"第四阶段·先知呼声",months:"第11-15月",col:"#2c5f8a",books:[
+    {book:"但以理书",ch:12,type:"先知",dif:2,map:"巴比伦·波斯",era:"被掳时期"},
+    {book:"以赛亚书",ch:66,type:"先知",dif:3,map:"耶路撒冷·全地",era:"亚述威胁时代"},
+    {book:"耶利米书",ch:52,type:"先知",dif:3,map:"耶路撒冷",era:"巴比伦入侵前夕"},
+    {book:"哀歌",ch:5,type:"诗歌",dif:2,map:"被毁的耶路撒冷",era:"前586年"},
+    {book:"以西结书",ch:48,type:"先知",dif:3,map:"巴比伦·以色列地",era:"被掳时期"},
+    {book:"阿摩司书",ch:9,type:"先知",dif:2,map:"北国以色列",era:"约前760年"},
+    {book:"何西阿书",ch:14,type:"先知",dif:2,map:"北国以色列",era:"约前750年"},
+    {book:"弥迦书",ch:7,type:"先知",dif:2,map:"犹大地",era:"亚述入侵时期"},
+    {book:"约珥书",ch:3,type:"先知",dif:2,map:"犹大地",era:"年代不确定"},
+    {book:"那鸿书",ch:3,type:"先知",dif:2,map:"尼尼微",era:"亚述灭亡前"},
+    {book:"哈巴谷书",ch:3,type:"先知",dif:2,map:"犹大地",era:"巴比伦崛起时"},
+    {book:"西番雅书",ch:3,type:"先知",dif:2,map:"犹大地",era:"约西亚改革前"},
+    {book:"俄巴底亚书",ch:1,type:"先知",dif:2,map:"以东地",era:"耶路撒冷沦陷"},
+    {book:"哈该书",ch:2,type:"先知",dif:2,map:"耶路撒冷",era:"归回重建期"},
+    {book:"撒迦利亚书",ch:14,type:"先知",dif:3,map:"耶路撒冷",era:"归回重建期"},
+    {book:"玛拉基书",ch:4,type:"先知",dif:2,map:"耶路撒冷",era:"约前430年"},
+  ]},
+  {phase:"第五阶段·律法补全",months:"第16-18月",col:"#8a6020",books:[
+    {book:"利未记",ch:27,type:"律法",dif:3,map:"西奈山营地",era:"出埃及后"},
+    {book:"民数记",ch:36,type:"叙事",dif:3,map:"旷野路线",era:"出埃及后"},
+    {book:"申命记",ch:34,type:"律法",dif:2,map:"摩押平原",era:"进迦南前"},
+    {book:"士师记",ch:21,type:"叙事",dif:2,map:"迦南各支派地",era:"进迦南后"},
+    {book:"历代志上",ch:29,type:"叙事",dif:2,map:"以色列全地",era:"大卫时代"},
+    {book:"历代志下",ch:36,type:"叙事",dif:2,map:"以色列全地",era:"所罗门至亡国"},
+  ]},
+  {phase:"第六阶段·福音时代",months:"第19-22月",col:"#1a6b4a",books:[
+    {book:"路加福音",ch:24,type:"福音",dif:1,map:"加利利·耶路撒冷",era:"公元1-30年"},
+    {book:"约翰福音",ch:21,type:"福音",dif:1,map:"犹太地·撒玛利亚",era:"公元30年"},
+    {book:"马可福音",ch:16,type:"福音",dif:1,map:"加利利·耶路撒冷",era:"公元65年写成"},
+    {book:"马太福音",ch:28,type:"福音",dif:1,map:"以色列全地",era:"公元80年写成"},
+    {book:"使徒行传",ch:28,type:"叙事",dif:1,map:"耶路撒冷·罗马",era:"公元30-62年"},
+    {book:"罗马书",ch:16,type:"书信",dif:2,map:"罗马",era:"公元57年"},
+    {book:"哥林多前书",ch:16,type:"书信",dif:2,map:"哥林多",era:"公元55年"},
+    {book:"哥林多后书",ch:13,type:"书信",dif:2,map:"哥林多",era:"公元55-56年"},
+    {book:"加拉太书",ch:6,type:"书信",dif:2,map:"加拉太",era:"公元48年"},
+    {book:"以弗所书",ch:6,type:"书信",dif:1,map:"以弗所",era:"公元60年"},
+    {book:"腓立比书",ch:4,type:"书信",dif:1,map:"腓立比",era:"公元60年"},
+    {book:"歌罗西书",ch:4,type:"书信",dif:1,map:"歌罗西",era:"公元60年"},
+    {book:"帖撒罗尼迦前书",ch:5,type:"书信",dif:1,map:"帖撒罗尼迦",era:"公元51年"},
+    {book:"帖撒罗尼迦后书",ch:3,type:"书信",dif:1,map:"帖撒罗尼迦",era:"公元52年"},
+    {book:"提摩太前书",ch:6,type:"书信",dif:1,map:"以弗所",era:"公元62年"},
+    {book:"提摩太后书",ch:4,type:"书信",dif:1,map:"罗马",era:"公元67年"},
+    {book:"提多书",ch:3,type:"书信",dif:1,map:"革哩底",era:"公元63年"},
+    {book:"腓利门书",ch:1,type:"书信",dif:1,map:"骨罗西",era:"公元60年"},
+    {book:"希伯来书",ch:13,type:"书信",dif:2,map:"未知",era:"公元60-70年"},
+    {book:"雅各书",ch:5,type:"书信",dif:1,map:"耶路撒冷",era:"公元49年"},
+    {book:"彼得前书",ch:5,type:"书信",dif:1,map:"小亚细亚",era:"公元64年"},
+    {book:"彼得后书",ch:3,type:"书信",dif:1,map:"罗马",era:"公元67年"},
+    {book:"约翰一书",ch:5,type:"书信",dif:1,map:"以弗所",era:"公元90年"},
+    {book:"约翰二书",ch:1,type:"书信",dif:1,map:"以弗所",era:"公元90年"},
+    {book:"约翰三书",ch:1,type:"书信",dif:1,map:"以弗所",era:"公元90年"},
+    {book:"犹大书",ch:1,type:"书信",dif:1,map:"未知",era:"公元65年"},
+    {book:"启示录",ch:22,type:"启示",dif:3,map:"拔摩岛·小亚细亚",era:"公元96年"},
+  ]},
+];
+
+// Flatten
+let ALL=[];
+PLAN.forEach((ph,pi)=>ph.books.forEach(b=>{
+  for(let c=1;c<=b.ch;c++) ALL.push({pi,book:b.book,ch:c,total:b.ch,type:b.type,dif:b.dif,map:b.map,era:b.era,id:`${b.book}_${c}`});
+}));
+
+// State
+let S={startDate:null,done:{},gdocId:'',prefs:{ff:true,hist:true,comm:true}};
+function loadS(){try{const r=localStorage.getItem('bp3');if(r)S={...S,...JSON.parse(r)}}catch(e){}}
+function saveS(){try{localStorage.setItem('bp3',JSON.stringify(S))}catch(e){}}
+
+function todayIdx(){
+  if(!S.startDate) return 0;
+  const d=Math.floor((Date.now()-new Date(S.startDate).getTime())/86400000);
+  return Math.max(0,Math.min(d,ALL.length-1));
+}
+function calcStreak(){
+  const t=todayIdx();let s=0;
+  for(let i=t;i>=0;i--){if(S.done[ALL[i].id])s++;else if(i<t)break;}
+  return s;
+}
+
+function updateStats(){
+  const done=Object.values(S.done).filter(Boolean).length;
+  const streak=calcStreak();
+  const t=todayIdx();
+  document.getElementById('s-days').textContent=done;
+  document.getElementById('s-streak').textContent=streak;
+  document.getElementById('s-pct').textContent=Math.round(done/ALL.length*100)+'%';
+  document.getElementById('s-left').textContent=Math.max(0,730-t);
+
+  const icons=['🌱','🌿','🌳','🔥','⚡','👑','✨'];
+  document.getElementById('str-icon').textContent=icons[Math.min(Math.floor(streak/7),6)];
+  document.getElementById('str-msg').textContent=streak===0?'开始你的读经旅程！':streak<3?'保持下去！':streak<7?`连续${streak}天！🔥`:streak<30?`${streak}天！太棒了！`:`${streak}天！你在发光！`;
+  document.getElementById('str-sub').textContent=`共${ALL.length}章，已完成${done}章`;
+
+  // dots
+  const dotsEl=document.getElementById('str-dots');dotsEl.innerHTML='';
+  const days=['日','一','二','三','四','五','六'];
+  if(S.startDate){
+    for(let i=6;i>=0;i--){
+      const idx=t-i;if(idx<0)continue;
+      const ch=ALL[idx];
+      const dt=new Date(new Date(S.startDate).getTime()+idx*86400000);
+      const d=document.createElement('div');
+      d.className='sdot'+(S.done[ch.id]?' done':i===0?' today':'');
+      d.textContent=days[dt.getDay()];dotsEl.appendChild(d);
+    }
+  }
+}
+
+// ─── AI Call ─────────────────────────────────
+async function ai(prompt,max=500){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:max,
+      messages:[{role:"user",content:prompt}]})
+  });
+  const d=await r.json();
+  return d.content?.[0]?.text||'';
+}
+
+// ─── Render Today ────────────────────────────
+let currentCh=null;
+async function renderToday(){
+  const idx=todayIdx();
+  const ch=ALL[idx];currentCh=ch;
+  document.getElementById('t-daynum').textContent=`第${idx+1}天`;
+  document.getElementById('t-ref').textContent=`${ch.book} ${ch.ch}章`;
+  document.getElementById('t-type').textContent=`${ch.type} · ${'⭐'.repeat(ch.dif)}`;
+  document.getElementById('t-chtitle').textContent=`${ch.book} 第${ch.ch}章`;
+  document.getElementById('t-maplbl').textContent=ch.map;
+  const chkBtn=document.getElementById('main-chk');
+  chkBtn.textContent=S.done[ch.id]?'✓':'○';
+  chkBtn.className='chk-btn'+(S.done[ch.id]?' done':'');
+
+  // sections visibility
+  document.getElementById('box-funfact').style.display=S.prefs.ff?'':'none';
+  document.getElementById('box-history').style.display=S.prefs.hist?'':'none';
+  document.getElementById('box-commentary').style.display=S.prefs.comm?'':'none';
+
+  // Reset
+  if(S.prefs.ff) document.getElementById('txt-funfact').innerHTML='<div class="ai-gen"><div class="ai-dot"></div>加载中…</div>';
+  if(S.prefs.hist) document.getElementById('txt-history').innerHTML='<div class="ai-gen"><div class="ai-dot"></div>加载中…</div>';
+  if(S.prefs.comm) document.getElementById('txt-commentary').innerHTML='<div class="ai-gen"><div class="ai-dot"></div>加载中…</div>';
+  document.getElementById('qs-container').innerHTML='<div class="loading"><div class="spin"></div>生成问题中…</div>';
+  document.getElementById('dev-container').innerHTML='<div class="loading"><div class="spin"></div>搜索灵修资源中…</div>';
+  document.getElementById('save-btn').disabled=true;
+
+  await Promise.all([
+    S.prefs.ff && loadFF(ch),
+    S.prefs.hist && loadHist(ch),
+    S.prefs.comm && loadComm(ch),
+    loadQs(ch),
+    loadDev(ch),
+  ]);
+}
+
+async function loadFF(ch){
+  const t=await ai(`关于圣经《${ch.book}》第${ch.ch}章（背景：${ch.era}，地点：${ch.map}），写一个有趣的Fun Fact，要和现代生活/科学/考古/心理学有真实联系。中文，2-3句话，要具体有趣，让人觉得"原来如此"。不要标题，直接内容。`,250);
+  document.getElementById('txt-funfact').textContent=t||'加载失败，请刷新';
+}
+async function loadHist(ch){
+  const t=await ai(`为《${ch.book}》第${ch.ch}章写历史背景注释（时代：${ch.era}，地点：${ch.map}，难度：${ch.dif}/3）。中文，4-5句话，包括：当时历史政治背景、地理位置意义、文化习俗，帮助读者理解经文。亲切口吻，不要学术堆砌。不要标题。`,300);
+  document.getElementById('txt-history').textContent=t||'加载失败';
+}
+async function loadComm(ch){
+  const t=await ai(`模仿丁道尔圣经注释的风格，对《${ch.book}》第${ch.ch}章做简短注释。中文，3-4句话，有学术深度但平易近人，点出核心神学意涵和原文重点词汇（可提及希伯来文/希腊文原词）。不要标题，直接内容。`,300);
+  document.getElementById('txt-commentary').textContent=t||'加载失败';
+}
+async function loadQs(ch){
+  const t=await ai(`为《${ch.book}》第${ch.ch}章设计3个读经默想问题。中文，涵盖：①观察（经文说了什么）②解释（这意味着什么）③应用（如何实践）。严格格式：\nQ1: 问题内容\nQ2: 问题内容\nQ3: 问题内容`,250);
+  const lines=t.split('\n').filter(l=>/^Q[123]:/.test(l.trim()));
+  if(!lines.length){document.getElementById('qs-container').innerHTML='<div style="color:#aaa;font-size:12px;padding:8px">问题加载失败，请刷新</div>';return;}
+  document.getElementById('qs-container').innerHTML=lines.map((l,i)=>{
+    const q=l.replace(/^Q[123]:\s*/,'');
+    return `<div class="q-item"><div class="q-num">问题 ${i+1}</div><div class="q-text">${q}</div><textarea class="q-ans" id="qa-${i}" placeholder="写下你的答案…" rows="3"></textarea></div>`;
+  }).join('');
+  document.getElementById('save-btn').disabled=false;
+}
+async function loadDev(ch){
+  const t=await ai(`针对《${ch.book}》第${ch.ch}章，虚构3条灵修推荐资源（格式真实但内容虚构）：
+1. 海外校园文章
+2. 生命季刊文章
+3. AI灵修默想
+每条格式（用---分隔）：
+来源: [海外校园|生命季刊|AI默想]
+标题: xxx
+摘要: 1-2句
+链接: https://example.com`,400);
+  const blocks=t.split('---').filter(b=>b.trim());
+  if(!blocks.length){document.getElementById('dev-container').innerHTML='<div style="color:#aaa;font-size:12px">暂无资源</div>';return;}
+  document.getElementById('dev-container').innerHTML=blocks.slice(0,3).map(b=>{
+    const m=k=>b.match(new RegExp(k+':\\s*(.+)','m'))?.[1]?.trim()||'';
+    const src=m('来源');const cls=src.includes('海外')?'oc':src.includes('生命')?'lq':'ai';
+    return `<div class="dev-card"><span class="dev-src ${cls}">${src||'AI默想'}</span><div class="dev-body"><strong>${m('标题')||'相关文章'}</strong><p>${m('摘要')}</p><a class="dev-link" href="${m('链接')||'#'}" target="_blank">阅读全文 →</a></div></div>`;
+  }).join('');
+}
+
+function toggleCheck(){
+  if(!currentCh)return;
+  S.done[currentCh.id]=!S.done[currentCh.id];saveS();updateStats();
+  const btn=document.getElementById('main-chk');
+  btn.textContent=S.done[currentCh.id]?'✓':'○';
+  btn.className='chk-btn'+(S.done[currentCh.id]?' done':'');
+  if(S.done[currentCh.id]) toast(enc());
+}
+function enc(){
+  return ['✦ 今天的话语已落入心中','🌟 一章完成！积少成多','📖 棒！继续保持','🔥 坚持就是蒙福！','✨ 神的话语是你脚前的灯！'][Math.floor(Math.random()*5)];
+}
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ─── Save to Google Doc ──────────────────────
+function saveDoc(){
+  if(!currentCh)return;
+  const qs=[...document.querySelectorAll('.q-text')].map(e=>e.textContent);
+  const as=[0,1,2].map(i=>document.getElementById('qa-'+i)?.value||'');
+  const date=new Date().toLocaleDateString('zh-CN');
+  const content=`=== 读经记录 · ${date} ===\n书卷：${currentCh.book} 第${currentCh.ch}章\n时代：${currentCh.era}\n\n【问题1】${qs[0]||''}\n【回答】${as[0]||'（未填写）'}\n\n【问题2】${qs[1]||''}\n【回答】${as[1]||'（未填写）'}\n\n【问题3】${qs[2]||''}\n【回答】${as[2]||'（未填写）'}\n\n` + '─'.repeat(30)+'\n';
+  navigator.clipboard.writeText(content).then(()=>{
+    if(S.gdocId) window.open(`https://docs.google.com/document/d/${S.gdocId}/edit`,'_blank');
+    document.getElementById('save-status').textContent='✓ 已复制到剪贴板'+(S.gdocId?'，Google Doc 已打开，请粘贴':'，请先在设置中填写 Google Doc ID');
+    document.getElementById('save-status').style.color='var(--sage)';
+    toast('📋 已复制，去粘贴吧！');
+  }).catch(()=>{
+    document.getElementById('save-status').textContent='请手动复制内容';
+  });
+}
+
+// ─── Plan ────────────────────────────────────
+function renderPlan(){
+  const tidx=todayIdx(),curBook=ALL[tidx]?.book;
+  document.getElementById('plan-phases').innerHTML=PLAN.map((ph,pi)=>{
+    const total=ph.books.reduce((a,b)=>a+b.ch,0);
+    const done=ph.books.reduce((a,b)=>{let n=0;for(let c=1;c<=b.ch;c++)if(S.done[`${b.book}_${c}`])n++;return a+n;},0);
+    const pct=Math.round(done/total*100);
+    return `<div class="phase-block">
+      <div class="phase-hdr" onclick="togglePh(${pi})">
+        <div><div class="phase-name" style="color:${ph.col}">${ph.phase}</div><div class="phase-meta">${ph.months} · ${done}/${total}章 · ${pct}%</div></div>
+        <span style="color:#aaa;font-size:12px" id="ptog-${pi}">▼</span>
+      </div>
+      <div class="phase-prog"><div class="phase-prog-fill" style="width:${pct}%;background:${ph.col}"></div></div>
+      <div class="phase-books" id="pb-${pi}">${ph.books.map(b=>{
+        const bd=[...Array(b.ch)].filter((_,i)=>S.done[`${b.book}_${i+1}`]).length;
+        const isCur=b.book===curBook,isDone=bd===b.ch;
+        return `<div class="bpill${isCur?' current':isDone?' done':''}" title="${b.era}">${b.book}${bd>0?` (${bd}/${b.ch})`:''}</div>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function togglePh(pi){
+  const el=document.getElementById(`pb-${pi}`),tog=document.getElementById(`ptog-${pi}`);
+  el.style.display=el.style.display==='none'?'':'none';tog.textContent=el.style.display==='none'?'▶':'▼';
+}
+
+// ─── Heatmap ─────────────────────────────────
+function renderHeatmap(){
+  const t=todayIdx(),show=Math.min(t+14,ALL.length);
+  document.getElementById('hm-grid').innerHTML=[...Array(show)].map((_,i)=>{
+    const ch=ALL[i];
+    return `<div class="hm-cell${S.done[ch.id]?' done':''} ${i===t?'today-c':''}" title="${ch.book}${ch.ch}章"></div>`;
+  }).join('');
+  let missed=0;for(let i=0;i<t;i++)if(!S.done[ALL[i].id])missed++;
+  const el=document.getElementById('catchup-msg');
+  if(missed===0){el.innerHTML='🎉 没有落后！继续保持每天的节奏。';}
+  else{
+    const rem=ALL.length-t-1;
+    const extra=Math.min(2,Math.ceil(missed/rem*7));
+    el.innerHTML=`你落后了 <strong>${missed} 章</strong>，别担心！接下来每天多读 <strong>${extra} 章</strong>，就能在两年内读完。<br>也可以跳过利未记、民数记中的仪式细节段落（不影响理解）。<br><span style="color:var(--sage)">神看重你的心，不是你的速度 ❤️</span>`;
+  }
+}
+
+// ─── Settings ────────────────────────────────
+function saveSetting(){
+  const sd=document.getElementById('inp-startdate').value;
+  if(sd) S.startDate=sd;
+  S.gdocId=document.getElementById('inp-gdocid').value.trim();
+  S.prefs.ff=document.getElementById('pref-ff').checked;
+  S.prefs.hist=document.getElementById('pref-hist').checked;
+  S.prefs.comm=document.getElementById('pref-comm').checked;
+  saveS();toast('设置已保存');
+}
+function loadSettings(){
+  if(S.startDate) document.getElementById('inp-startdate').value=S.startDate;
+  if(S.gdocId) document.getElementById('inp-gdocid').value=S.gdocId;
+  document.getElementById('pref-ff').checked=S.prefs.ff!==false;
+  document.getElementById('pref-hist').checked=S.prefs.hist!==false;
+  document.getElementById('pref-comm').checked=S.prefs.comm!==false;
+}
+function resetAll(){if(confirm('确定重置所有进度？')){S.done={};saveS();updateStats();renderToday();toast('进度已重置');}}
+
+// ─── Tab ─────────────────────────────────────
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['today','plan','heatmap','settings'][i]===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(id==='plan') renderPlan();
+  if(id==='heatmap') renderHeatmap();
+  if(id==='settings') loadSettings();
+}
+
+// ─── Password ────────────────────────────────
+// ★ 在这里修改你的密码 ★
+const PASSWORD = 'bible2024';
+
+// SHA-256 hash so the password isn't stored in plain text in localStorage
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPw(){
+  const val=document.getElementById('pw-input').value;
+  const errEl=document.getElementById('pw-err');
+  if(!val){errEl.textContent='请输入密码';return;}
+  const hash=await sha256(val);
+  const correctHash=await sha256(PASSWORD);
+  if(hash===correctHash){
+    sessionStorage.setItem('bp_auth','1');
+    const screen=document.getElementById('pw-screen');
+    screen.style.opacity='0';screen.style.transition='opacity .4s';
+    setTimeout(()=>{screen.style.display='none';},400);
+    document.getElementById('main-app').style.display='';
+    initApp();
+  } else {
+    errEl.textContent='密码错误，请再试一次';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+    // shake animation
+    const box=document.querySelector('.pw-box');
+    box.style.animation='shake .35s ease';
+    setTimeout(()=>box.style.animation='',400);
+  }
+}
+
+// Shake keyframes injected dynamically
+const shakeStyle=document.createElement('style');
+shakeStyle.textContent='@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}';
+document.head.appendChild(shakeStyle);
+
+// ─── Init (called after auth) ─────────────────
+function initApp(){
+  loadS();
+  if(!S.startDate){S.startDate=new Date().toISOString().split('T')[0];saveS();}
+  updateStats();
+  renderToday();
+}
+
+// Check if already authenticated this session
+if(sessionStorage.getItem('bp_auth')==='1'){
+  document.getElementById('pw-screen').style.display='none';
+  document.getElementById('main-app').style.display='';
+  initApp();
+} else {
+  // Focus input on load
+  window.addEventListener('load',()=>document.getElementById('pw-input')?.focus());
+}
+</script>
+</body>
+</html>
